@@ -1,0 +1,54 @@
+{
+    "PatellofemoralJoint/KinematicsKinetics": 
+    {
+        "optimized":
+        [
+            {
+                "subject" : "joint_mechanics-oks001",
+                "path" : "006_Passive Flexion 0-60, optimized/Data/006_Passive Flexion 0-60, optimized_main_processed.tdms"
+            },
+            {
+                "subject" : "joint_mechanics-oks002",
+                "path" : "004_optimized passive flexion 0-60/Data/004_optimized passive flexion 0-60_main_processed.tdms"
+            }
+        ],
+        "unoptimized":
+        [   
+            {
+                "subject" : "joint_mechanics-oks001",
+                "path" : "005_Passive Flexion 0-60/Data/005_Passive Flexion 0-60_main_processed.tdms"
+            },
+            {
+                "subject" : "joint_mechanics-oks002",
+                "path" : "002_passive flexion 0-60/Data/002_passive flexion 0-60_main_processed.tdms"
+            }
+        ]
+    },
+
+    "TibiofemoralJoint/KinematicsKinetics":
+    {
+        "optimized":
+        [
+            {
+                "subject" : "joint_mechanics-oks001",
+                "path" : "005_passive flexion_optimized/Data/005_passive flexion_optimized_main_processed.tdms"
+            },
+            {
+                "subject" : "joint_mechanics-oks002",
+                "path" : "003_Optimized Passive Flexion 0-90/Data/003_Optimized Passive Flexion 0-90_main_processed.tdms"
+            }
+        ],
+        "unoptimized":
+        [   
+            {
+                "subject" : "joint_mechanics-oks001",
+                "path" : "004_passive flexion/Data/004_passive flexion_main_processed.tdms"
+            },
+            {
+                "subject" : "joint_mechanics-oks002",
+                "path" : "002_Passive Flexion 0-90/Data/002_Passive Flexion 0-90_main_processed.tdms"
+
+            }
+        ]
+    }
+}

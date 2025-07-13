@@ -20,12 +20,10 @@ PRINT_TDMS = False
 
 # TODO validate sampling rate and other meta data
 # TODO confirm the units of dt
-FILES = [
-"OpenKneeData/joint_mechanics-oks001/PatellofemoralJoint/KinematicsKinetics/005_Passive Flexion 0-60/Data/005_Passive Flexion 0-60_main_processed.tdms",
-"OpenKneeData/joint_mechanics-oks001/PatellofemoralJoint/KinematicsKinetics/006_Passive Flexion 0-60, optimized/Data/006_Passive Flexion 0-60, optimized_main_processed.tdms",
-"OpenKneeData/joint_mechanics-oks001/TibiofemoralJoint/KinematicsKinetics/004_passive flexion/Data/004_passive flexion_main_processed.tdms",
-"OpenKneeData/joint_mechanics-oks001/TibiofemoralJoint/KinematicsKinetics/005_passive flexion_optimized/Data/005_passive flexion_optimized_main_processed.tdms"
-]
+DATA_ROOT = "OpenKneeData"
+PATELLOFEMORAL = "PatellofemoralJoint/KinematicsKinetics"
+TIBIOFEMORAL = "TibiofemoralJoint/KinematicsKinetics"
+DATA_MAP = "datamap.json"
 
 def get_avg_sampling_rate(actual_dt):
     actual_dt_s = actual_dt / 1000.0
@@ -65,6 +63,7 @@ def extract_openknee_data(filepath):
     return time, flexion_angle, extension_torque
 
 def read_and_plot_all_trials():
+
     all_trials = []
 
     for filepath in FILES:
