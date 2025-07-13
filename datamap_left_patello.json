@@ -1,0 +1,27 @@
+{
+    "PatellofemoralJoint/KinematicsKinetics": 
+    {
+        "unoptimized":
+        [   
+            {
+                "subject" : "joint_mechanics-oks003",
+                "path" : "001_native passive flexion 0 - 60/Data/001_native passive flexion 0 - 60_main_processed_Left.tdms"
+            },
+            {
+                "subject" : "joint_mechanics-oks009",
+                "path" : "006_passive flexion 0-60/Data/006_passive flexion 0-60_main_processed_Left.tdms"
+            }
+        ],
+        "optimized":
+        [
+            {
+                "subject" : "joint_mechanics-oks003",
+                "path" : "002_native optimized passive flexion 0 - 60/Data/002_native optimized passive flexion 0 - 60_main_processed_Left.tdms"
+            },
+            {
+                "subject" : "joint_mechanics-oks009",
+                "path" : "007_passive flexion 0-60 optimized/Data/007_passive flexion 0-60 optimized_main_processed_Left.tdms"
+            }
+        ]
+    }
+}

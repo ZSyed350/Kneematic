@@ -11,19 +11,32 @@ TODO read the experiment steps to see what the timeline for each tril is suppose
 
 
 import os
+import json
 import numpy as np
 from nptdms import TdmsFile
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
+import matplotlib.patches as mpatches
+
+from extract_data import extract_openknee_data
 
 PRINT_TDMS = False
 
-# TODO validate sampling rate and other meta data
 # TODO confirm the units of dt
 DATA_ROOT = "OpenKneeData"
-PATELLOFEMORAL = "PatellofemoralJoint/KinematicsKinetics"
-TIBIOFEMORAL = "TibiofemoralJoint/KinematicsKinetics"
 DATA_MAP = "datamap.json"
+
+# Color map by joint type and optimization status
+COLOR_SCHEME = {
+    "PatellofemoralJoint/KinematicsKinetics": {
+        "optimized": "darkblue",
+        "unoptimized": "lightblue"
+    },
+    "TibiofemoralJoint/KinematicsKinetics": {
+        "optimized": "deeppink",
+        "unoptimized": "lightpink"
+    }
+}
 
 def get_avg_sampling_rate(actual_dt):
     actual_dt_s = actual_dt / 1000.0
@@ -38,81 +51,87 @@ def get_avg_sampling_rate(actual_dt):
 
     return sampling_rate_hz
 
-def extract_openknee_data(filepath):
-    tdms_file = TdmsFile.read(filepath)
-
-    if PRINT_TDMS:
-        # List all groups and channels
-        for group in tdms_file.groups():
-            print(f"Group: {group.name}")
-            for channel in group.channels():
-                print(f" Channel: {channel.name}")
-
-    # Extract relevant signals
-    # NOTE the first 20 samples have odd dt, not sure how that effects the analysis
-    flexion_angle = tdms_file["Kinematics.JCS.Actual"]["Flexion Angle"][:]
-    extension_torque = tdms_file["State.JCS Load"]["JCS Load Extension Torque"][:]
-    actual_dt = tdms_file["Timing.Control Loop Actual dt"]["Actual dt"][:] # Control loop Δt values in ms
-    setpoint_time = tdms_file["Timing.Sync Trigger"]["Setpoint Time"][:] # Not sure exactly what this is
-
-    # Time reconstruction
-    actual_dt = tdms_file["Timing.Control Loop Actual dt"]["Actual dt"][:] # Control loop intervals in ms
-    actual_dt_s = actual_dt / 1000.0 # Convert to seconds
-    time = np.cumsum(actual_dt_s) # Time signal in seconds
-
-    return time, flexion_angle, extension_torque
-
 def read_and_plot_all_trials():
+    with open(DATA_MAP, "r") as f:
+        data_map = json.load(f)
 
     all_trials = []
 
-    for filepath in FILES:
-        time, flexion_angle, extension_torque = extract_openknee_data(filepath)
-        trial_label = os.path.basename(filepath).split("_")[0]
-        all_trials.append({
-            "label": trial_label,
-            "time": time,
-            "angle": flexion_angle,
-            "torque": extension_torque
-        })
+    for joint_type, conditions in data_map.items():
+        for opt_status, trials in conditions.items():
+            for trial in trials:
+                rel_path = trial.get("path", "").strip()
+                if not rel_path:
+                    print(f"[WARNING] Skipping trial with empty path: {trial}")
+                    continue
+
+                full_path = os.path.join(DATA_ROOT, trial["subject"], joint_type, rel_path)
+                if not os.path.isfile(full_path):
+                    print(f"[WARNING] File not found: {full_path}. Skipping.")
+                    continue
+
+                try:
+                    time, angle, torque = extract_openknee_data(full_path, verbose=PRINT_TDMS)
+                    all_trials.append({
+                        "filepath": full_path,
+                        "joint": joint_type,
+                        "optimized": opt_status,
+                        "time": time,
+                        "angle": angle,
+                        "torque": torque
+                    })
+                except Exception as e:
+                    print(f"[ERROR] Failed to load {full_path}: {e}")
+
 
     # Create figure with two side-by-side subplots
     fig, axs = plt.subplots(1, 2, figsize=(14, 5))
 
     # Subplot 1: Extension Torque vs Flexion Angle
     for trial in all_trials:
-        axs[0].plot(trial["angle"], trial["torque"], label=trial["label"])
+        color = COLOR_SCHEME[trial["joint"]][trial["optimized"]]
+        try:
+            axs[0].plot(trial["angle"], trial["torque"], color=color)
+        except ValueError:
+            print(f"[ValueError] Array length mismath for torque vs angle {trial["filepath"]}")
     axs[0].set_xlabel("Flexion Angle (degrees)")
     axs[0].set_ylabel("Extension Torque (Nm)")
     axs[0].set_title("Extension Torque vs Flexion Angle")
     axs[0].grid(True)
-    axs[0].legend()
 
-    # Subplot 2: Torque and Angle Over Time (twinx)
+    # Subplot 2: Torque and Angle Over Time
     ax2 = axs[1]
+    ax2b = ax2.twinx()
     for trial in all_trials:
-        ax2.plot(trial["time"], trial["torque"], label=f"{trial['label']} - Torque")
+        color = COLOR_SCHEME[trial["joint"]][trial["optimized"]]
+        try:
+            ax2.plot(trial["time"], trial["torque"], color=color)
+            ax2b.plot(trial["time"], trial["angle"], linestyle='--', color=color)
+        except ValueError:
+            print(f"[ValueError] Array length mismatch for time-series data {trial["filepath"]}")
+
+    ax2.set_xlabel("Time (s)")
     ax2.set_ylabel("Extension Torque (Nm)", color='tab:red')
     ax2.tick_params(axis='y', labelcolor='tab:red')
-    ax2.set_xlabel("Time (s)")
     ax2.set_title("Torque and Angle Over Time")
     ax2.grid(True)
 
-    # Add second y-axis for flexion angle
-    ax2b = ax2.twinx()
-    for trial in all_trials:
-        ax2b.plot(trial["time"], trial["angle"], linestyle='--', label=f"{trial['label']} - Angle")
     ax2b.set_ylabel("Flexion Angle (deg)", color='tab:blue')
     ax2b.tick_params(axis='y', labelcolor='tab:blue')
 
-    # Clean up time axis formatting
+    # Format x-axis to avoid scientific notation
     ax2.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
     ax2.ticklabel_format(style='plain', axis='x')
 
-    # Combine legends from both y-axes
-    lines1, labels1 = ax2.get_legend_handles_labels()
-    lines2, labels2 = ax2b.get_legend_handles_labels()
-    axs[1].legend(lines1 + lines2, labels1 + labels2, loc="upper left")
+        # Add a legend for color coding
+    legend_patches = [
+        mpatches.Patch(color='lightblue', label='Patellofemoral – Unoptimized'),
+        mpatches.Patch(color='darkblue', label='Patellofemoral – Optimized'),
+        mpatches.Patch(color='lightpink', label='Tibiofemoral – Unoptimized'),
+        mpatches.Patch(color='deeppink', label='Tibiofemoral – Optimized')
+    ]
+    axs[0].legend(handles=legend_patches, loc="upper left", title="Trial Categories")
+
 
     plt.tight_layout()
     plt.show()
