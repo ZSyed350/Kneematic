@@ -96,27 +96,27 @@
             },
             {
                 "subject" : "joint_mechanics-oks003",
-                "path" : ""
+                "path" : "002_passive flexion_0-90/Data/002_passive flexion_0-90_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks004",
-                "path" : ""
+                "path" : "010_Passive Flexion/Data/010_Passive Flexion_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks006",
-                "path" : ""
+                "path" : "003_Passive Flexion 0-90/Data/003_Passive Flexion 0-90_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks007",
-                "path" : ""
+                "path" : "002_passive flexion/Data/002_passive flexion_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks008",
-                "path" : ""
+                "path" : "199_Passive Flexion/Data/199_Passive Flexion_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks009",
-                "path" : ""
+                "path" : "007_passive flexion remount/Data/007_passive flexion remount_main_processed.tdms"
             }
         ],
         "optimized":
@@ -131,27 +131,31 @@
             },
             {
                 "subject" : "joint_mechanics-oks003",
-                "path" : ""
+                "path" : "003_optimized passive flexion_0-90/Data/003_optimized passive flexion_0-90_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks004",
-                "path" : ""
+                "path" : "013_Passive_Flexion_Optimized/Data/013_Passive_Flexion_Optimized_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks006",
-                "path" : ""
+                "path" : "004_Optimized Passive Flexion 0-90/Data/004_Optimized Passive Flexion 0-90_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks007",
-                "path" : ""
+                "path" : "003_optimized passive flexion/Data/003_optimized passive flexion_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks008",
-                "path" : ""
+                "path" : "200_Passive Flexion_optimized/Data/200_Passive Flexion_optimized_main_processed.tdms"
+            },
+            {
+                "subject" : "joint_mechanics-oks008",
+                "path" : "204_Passive Flexion_slower_re-optimized/Data/204_Passive Flexion_slower_re-optimized_main_processed.tdms"
             },
             {
                 "subject" : "joint_mechanics-oks009",
-                "path" : ""
+                "path" : "008_passive flexion remount_optimized/Data/008_passive flexion remount_optimized_main_processed.tdms"
             }
         ]
     }

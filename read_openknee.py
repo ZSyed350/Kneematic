@@ -72,6 +72,10 @@ def read_and_plot_all_trials():
 
                 try:
                     time, angle, torque = extract_openknee_data(full_path, verbose=PRINT_TDMS)
+
+                    if np.min(torque) < -8:
+                        print(f"[OUTLIER] Torque below -10 Nm in file: {full_path} (min: {np.min(torque):.2f})")
+
                     all_trials.append({
                         "filepath": full_path,
                         "joint": joint_type,
@@ -85,7 +89,7 @@ def read_and_plot_all_trials():
 
 
     # Create figure with two side-by-side subplots
-    fig, axs = plt.subplots(1, 2, figsize=(14, 5))
+    fig, axs = plt.subplots(1, 2, figsize=(14, 6))
 
     # Subplot 1: Extension Torque vs Flexion Angle
     for trial in all_trials:
@@ -130,7 +134,7 @@ def read_and_plot_all_trials():
         mpatches.Patch(color='lightpink', label='Tibiofemoral – Unoptimized'),
         mpatches.Patch(color='deeppink', label='Tibiofemoral – Optimized')
     ]
-    axs[0].legend(handles=legend_patches, loc="upper left", title="Trial Categories")
+    axs[0].legend(handles=legend_patches, loc="upper right", title="Trial Categories")
 
 
     plt.tight_layout()
