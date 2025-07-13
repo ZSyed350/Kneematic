@@ -1,31 +1,66 @@
+"""
+http://archive.simtk.org/oks/MRI_JointMech/doc/2013RB-001-002.A simVITRO Data File Structure Quick Reference Guide.pdf --> CONTAINS IMPORTANT INFO ON THE PROCESSED FILES
+including that the data is TIME ALIGNED and been resampled. However, the sampling rate IS AT LARGE
+
+THE CONFIG FILES ARE VERY IMPORTANT, THEY CONTAIN THE UNITS
+
+explanation on exactly what the data is in mentioned in the appendix A2 at https://www.sciencedirect.com/science/article/pii/S2352340921001086?via%3Dihub#sec0014
+
+TODO read the experiment steps to see what the timeline for each tril is supposed to be
+"""
+
+
 import os
 import numpy as np
 from nptdms import TdmsFile
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 
-# TODO validate the units
-# TODO validate what is "optimized" meaning
-# TODO validate sampling rate and other meta data
+PRINT_TDMS = False
 
+# TODO validate sampling rate and other meta data
+# TODO confirm the units of dt
 FILES = [
-    "OpenKneeData/joint_mechanics-oks001/PatellofemoralJoint/KinematicsKinetics/005_Passive Flexion 0-60/Data/005_Passive Flexion 0-60_main_processed.tdms",
-    "OpenKneeData/joint_mechanics-oks001/PatellofemoralJoint/KinematicsKinetics/006_Passive Flexion 0-60, optimized/Data/006_Passive Flexion 0-60, optimized_main_processed.tdms",
-    "OpenKneeData/joint_mechanics-oks001/TibiofemoralJoint/KinematicsKinetics/004_passive flexion/Data/004_passive flexion_main_processed.tdms",
-    "OpenKneeData/joint_mechanics-oks001/TibiofemoralJoint/KinematicsKinetics/005_passive flexion_optimized/Data/005_passive flexion_optimized_main_processed.tdms"
+"OpenKneeData/joint_mechanics-oks001/PatellofemoralJoint/KinematicsKinetics/005_Passive Flexion 0-60/Data/005_Passive Flexion 0-60_main_processed.tdms",
+"OpenKneeData/joint_mechanics-oks001/PatellofemoralJoint/KinematicsKinetics/006_Passive Flexion 0-60, optimized/Data/006_Passive Flexion 0-60, optimized_main_processed.tdms",
+"OpenKneeData/joint_mechanics-oks001/TibiofemoralJoint/KinematicsKinetics/004_passive flexion/Data/004_passive flexion_main_processed.tdms",
+"OpenKneeData/joint_mechanics-oks001/TibiofemoralJoint/KinematicsKinetics/005_passive flexion_optimized/Data/005_passive flexion_optimized_main_processed.tdms"
 ]
+
+def get_avg_sampling_rate(actual_dt):
+    actual_dt_s = actual_dt / 1000.0
+
+    # Focus on the region where it stabilizes (~after first 15–20 entries)
+    stable_dt = actual_dt_s[20:] # skip initialization
+
+    # Estimate sampling rate
+    mean_dt = np.mean(stable_dt)
+    sampling_rate_hz = 1.0 / mean_dt
+    print(f"Sampling rate: {sampling_rate_hz}")
+
+    return sampling_rate_hz
 
 def extract_openknee_data(filepath):
     tdms_file = TdmsFile.read(filepath)
 
+    if PRINT_TDMS:
+        # List all groups and channels
+        for group in tdms_file.groups():
+            print(f"Group: {group.name}")
+            for channel in group.channels():
+                print(f" Channel: {channel.name}")
+
     # Extract relevant signals
+    # NOTE the first 20 samples have odd dt, not sure how that effects the analysis
     flexion_angle = tdms_file["Kinematics.JCS.Actual"]["Flexion Angle"][:]
     extension_torque = tdms_file["State.JCS Load"]["JCS Load Extension Torque"][:]
-    dt = tdms_file["Timing.Control Loop Actual dt"]["Actual dt"][:]
+    actual_dt = tdms_file["Timing.Control Loop Actual dt"]["Actual dt"][:] # Control loop Δt values in ms
+    setpoint_time = tdms_file["Timing.Sync Trigger"]["Setpoint Time"][:] # Not sure exactly what this is
 
     # Time reconstruction
-    # TODO refer to source code for this
-    time = np.cumsum(dt) if len(dt) > 1 else np.arange(len(flexion_angle)) * dt[0]
+    actual_dt = tdms_file["Timing.Control Loop Actual dt"]["Actual dt"][:] # Control loop intervals in ms
+    actual_dt_s = actual_dt / 1000.0 # Convert to seconds
+    time = np.cumsum(actual_dt_s) # Time signal in seconds
 
     return time, flexion_angle, extension_torque
 
