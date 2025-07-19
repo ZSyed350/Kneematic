@@ -51,7 +51,7 @@ def get_avg_sampling_rate(actual_dt):
 
     return sampling_rate_hz
 
-def read_and_plot_all_trials():
+def read_all_trials():
     with open(DATA_MAP, "r") as f:
         data_map = json.load(f)
 
@@ -87,7 +87,9 @@ def read_and_plot_all_trials():
                 except Exception as e:
                     print(f"[ERROR] Failed to load {full_path}: {e}")
 
+    return all_trials
 
+def plot_all_data(all_trials):
     # Create figure with two side-by-side subplots
     fig, axs = plt.subplots(1, 2, figsize=(14, 6))
 
@@ -136,9 +138,13 @@ def read_and_plot_all_trials():
     ]
     axs[0].legend(handles=legend_patches, loc="upper right", title="Trial Categories")
 
-
     plt.tight_layout()
+    plt.savefig("all_data.png")
     plt.show()
 
+def main():
+    all_trials = read_all_trials()
+    plot_all_data(all_trials)
+    
 if __name__ == "__main__":
-    read_and_plot_all_trials()
+    main()
