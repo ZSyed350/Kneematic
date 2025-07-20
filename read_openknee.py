@@ -141,7 +141,7 @@ def plot_all_data(all_trials):
     axs[0].legend(handles=legend_patches, loc="upper right", title="Trial Categories")
 
     plt.tight_layout()
-    plt.savefig("all_data.png")
+    plt.savefig("pictures/all_data.png")
     plt.show()
 
 def plot_tibiofemoral_data(all_trials):
@@ -197,7 +197,7 @@ def plot_tibiofemoral_data(all_trials):
     axs[0].legend(handles=legend_patches, loc="upper right", title="Trial Categories")
 
     plt.tight_layout()
-    plt.savefig("tibiofemoral_data.png")
+    plt.savefig("pictures/tibiofemoral_data.png")
     plt.show()
 
 def normalize_data_by_flexion(all_trials):
@@ -211,6 +211,8 @@ def normalize_data_by_flexion(all_trials):
     all_angles = np.concatenate([np.array(trial["angle"]) for trial in tibiofemoral_trials])
     global_min_angle = np.min(all_angles)
     global_max_angle = np.max(all_angles)
+
+    processed_trials = []
     
     for trial in all_trials:
         angle = np.array(trial["angle"])
@@ -223,10 +225,16 @@ def normalize_data_by_flexion(all_trials):
         # Directly get index arrays
         rising_indices = np.where(slope > slope_threshold)[0]
         falling_indices = np.where(slope < -slope_threshold)[0]
+        
+        if len(rising_indices) == 0 or len(falling_indices) == 0:
+            continue  # skip trial if we can't find valid rising/falling
 
         # Extract segments
         last_rising_idx = rising_indices[-1]
         first_falling_idx = falling_indices[0]
+
+        if last_rising_idx >= first_falling_idx:
+            continue  # skip if invalid index range
 
         rising_idx = np.arange(rising_indices[0], last_rising_idx + 1)
         flat_idx = np.arange(last_rising_idx + 1, first_falling_idx)
@@ -247,65 +255,10 @@ def normalize_data_by_flexion(all_trials):
             plt.tight_layout()
             plt.show()
 
-
-
-def plot_tibiofemoral_normalized_flexion(all_trials, num_points=500):
-    tibiofemoral_trials = [t for t in all_trials if t["joint"] == "TibiofemoralJoint/KinematicsKinetics"]
-
-    if not tibiofemoral_trials:
-        print("No tibiofemoral trials found.")
-        return
-
-    fig, ax1 = plt.subplots(figsize=(10, 6))
-    ax2 = ax1.twinx()
-
-    for trial in tibiofemoral_trials:
-        angle = trial["angle"]
-        torque = trial["torque"]
-
-        # Normalize flexion progress to % (0 to 100)
-        flexion_progress = np.linspace(0, 100, num_points)
-
-        # Create interpolation functions over flexion angle
-        try:
-            angle_interp = interp1d(np.linspace(0, 100, len(angle)), angle, kind='linear', bounds_error=False, fill_value="extrapolate")
-            torque_interp = interp1d(np.linspace(0, 100, len(torque)), torque, kind='linear', bounds_error=False, fill_value="extrapolate")
-
-            # Resample to fixed number of points across 0–100% flexion
-            norm_angle = angle_interp(flexion_progress)
-            norm_torque = torque_interp(flexion_progress)
-
-            color = COLOR_SCHEME[trial["joint"]][trial["optimized"]]
-
-            ax1.plot(flexion_progress, norm_torque, color=color)
-            ax2.plot(flexion_progress, norm_angle, linestyle='--', color=color, alpha=0.6)
-        except Exception as e:
-            print(f"[ERROR] Interpolation failed for {trial['filepath']}: {e}")
-
-    ax1.set_xlabel("Flexion Progress (%)")
-    ax1.set_ylabel("Extension Torque (Nm)", color='tab:red')
-    ax2.set_ylabel("Flexion Angle (deg)", color='tab:blue')
-
-    ax1.set_title("Tibiofemoral: Extension Torque vs Normalized Flexion Cycle")
-    ax1.grid(True)
-    ax1.tick_params(axis='y', labelcolor='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:blue')
-
-    # Add legend
-    legend_patches = [
-        mpatches.Patch(color='lightpink', label='Tibiofemoral – Unoptimized'),
-        mpatches.Patch(color='deeppink', label='Tibiofemoral – Optimized')
-    ]
-    ax1.legend(handles=legend_patches, loc="upper right", title="Trial Categories")
-
-    plt.tight_layout()
-    plt.savefig("tibiofemoral_normalized.png")
-    plt.show()
-
 def main():
     all_trials = read_all_trials()
     # plot_all_data(all_trials)
-    # plot_tibiofemoral_data(all_trials)
+    plot_tibiofemoral_data(all_trials)
     normalize_data_by_flexion(all_trials)
     
 if __name__ == "__main__":
