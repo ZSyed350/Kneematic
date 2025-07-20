@@ -373,13 +373,60 @@ def process_split_trials(split_trials):
 
     return filtered_trials
 
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter
+
+def plot_torque_vs_angle_normalized(filtered_trials):
+    if not filtered_trials:
+        print("No filtered trials to plot.")
+        return
+
+    fig, axs = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+    axs[0].set_title("Flexion Phase (Rising) – Torque vs Angle")
+    axs[1].set_title("Extension Phase (Falling) – Torque vs Angle")
+
+    # Visual styles
+    color = "tab:red"
+    alpha = 0.6
+
+    # Plot Flexion (Rising)
+    for trial in filtered_trials:
+        axs[0].plot(
+            trial["rising"]["angle"],
+            trial["rising"]["torque"],
+            color=color,
+            alpha=alpha
+        )
+
+    # Plot Extension (Falling) — flip x-axis
+    for trial in filtered_trials:
+        axs[1].plot(
+            trial["falling"]["angle"],
+            trial["falling"]["torque"],
+            color=color,
+            alpha=alpha
+        )
+    axs[1].invert_xaxis()
+
+    # Axis labels and formatting
+    for ax in axs:
+        ax.set_xlabel("Angle (degrees)")
+        ax.set_ylabel("Torque (Nm)")
+        ax.grid(True)
+        ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
+        ax.ticklabel_format(style="plain", axis="x")
+
+    plt.tight_layout()
+    plt.savefig("pictures/torque_vs_angle_normalized.png")
+    plt.show()
 
 def main():
     all_trials = read_all_trials()
     # plot_all_data(all_trials)
     # plot_tibiofemoral_data(all_trials)
     flexion_split_trials = split_data_by_flexion(all_trials)
-    process_split_trials(flexion_split_trials)
+    filtered_trials = process_split_trials(flexion_split_trials)
+    plot_torque_vs_angle_normalized(filtered_trials)
     
 if __name__ == "__main__":
     main()
