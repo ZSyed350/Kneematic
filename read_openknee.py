@@ -26,7 +26,7 @@ PRINT_TDMS = False
 # TODO confirm the units of dt
 DATA_ROOT = "OpenKneeData"
 DATA_MAP = "datamap.json"
-VERBOSE = False
+VERBOSE = True
 
 # Color map by joint type and optimization status
 COLOR_SCHEME = {
@@ -240,20 +240,85 @@ def normalize_data_by_flexion(all_trials):
         flat_idx = np.arange(last_rising_idx + 1, first_falling_idx)
         falling_idx = np.arange(first_falling_idx, falling_indices[-1] + 1)
 
-        if VERBOSE:
-            # Plot color-coded angle
-            plt.figure(figsize=(10, 4))
-            plt.plot(time[rising_idx], angle[rising_idx], label="Rising", color="tab:green")
-            plt.plot(time[flat_idx], angle[flat_idx], label="Flat", color="tab:blue")
-            plt.plot(time[falling_idx], angle[falling_idx], label="Falling", color="tab:red")
+        processed_trials.append({
+            "rising": {
+                "angle": angle[rising_idx],
+                "torque": torque[rising_idx],
+                "time": time[rising_idx],
+            },
+            "flat": {
+                "angle": angle[flat_idx],
+                "torque": torque[flat_idx],
+                "time": time[flat_idx],
+            },
+            "falling": {
+                "angle": angle[falling_idx],
+                "torque": torque[falling_idx],
+                "time": time[falling_idx],
+            }
+        })
 
-            plt.xlabel("Time (s)")
-            plt.ylabel("Flexion Angle (deg)")
-            plt.title("Angle Segmentation (No Mask Version)")
-            plt.legend()
-            plt.grid(True)
-            plt.tight_layout()
-            plt.show()
+    if VERBOSE:
+        # Create 2 subplots: one for rising (flexion), one for falling (extension)
+        fig, axs = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+        axs[0].set_title("Flexion Phase (Rising)")
+        axs[1].set_title("Extension Phase (Falling)")
+
+        # Define common visual styles
+        torque_color = "tab:red"
+        angle_color = "tab:blue"
+        torque_alpha = 0.6
+        angle_alpha = 0.5
+        angle_style = "--"
+
+        for i, phase in enumerate(["rising", "falling"]):
+            ax_torque = axs[i]
+            ax_angle = ax_torque.twinx()
+
+            for trial in processed_trials:
+                ax_torque.plot(
+                    trial[phase]["time"],
+                    trial[phase]["torque"],
+                    color=torque_color,
+                    alpha=torque_alpha,
+                )
+                ax_angle.plot(
+                    trial[phase]["time"],
+                    trial[phase]["angle"],
+                    linestyle=angle_style,
+                    color=angle_color,
+                    alpha=angle_alpha,
+                )
+
+            ax_torque.set_xlabel("Time (s)")
+            ax_torque.set_ylabel("Torque (Nm)", color=torque_color)
+            ax_torque.tick_params(axis="y", labelcolor=torque_color)
+            ax_torque.grid(True)
+            ax_torque.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
+            ax_torque.ticklabel_format(style="plain", axis="x")
+
+            ax_angle.set_ylabel("Angle (deg)", color=angle_color)
+            ax_angle.tick_params(axis="y", labelcolor=angle_color)
+
+        plt.tight_layout()
+        plt.show()
+        # # === Plotting ===
+        # fig, axs = plt.subplots(1, 2, figsize=(18, 5), sharey=True)
+        # axs[0].set_title("Flexion")
+        # axs[1].set_title("Extension")
+
+        # for trial in processed_trials:
+        #     axs[0].plot(trial["rising"]["angle"], trial["rising"]["torque"], alpha=0.7)
+        #     axs[1].plot(trial["falling"]["angle"], trial["falling"]["torque"], alpha=0.7)
+
+        # axs[1].invert_xaxis() # for flexed to extended
+        # for ax in axs:
+        #     ax.set_xlabel("Angle (degrees)")
+        #     ax.set_ylabel("Torque (Nm)")
+        #     ax.grid(True)
+
+        # plt.tight_layout()
+        # plt.show()
 
 def main():
     all_trials = read_all_trials()
