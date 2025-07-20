@@ -200,7 +200,7 @@ def plot_tibiofemoral_data(all_trials):
     plt.savefig("pictures/tibiofemoral_data.png")
     plt.show()
 
-def normalize_data_by_flexion(all_trials):
+def split_data_by_flexion(all_trials):
     tibiofemoral_trials = [t for t in all_trials if t["joint"] == "TibiofemoralJoint/KinematicsKinetics"]
 
     if not tibiofemoral_trials:
@@ -301,30 +301,85 @@ def normalize_data_by_flexion(all_trials):
             ax_angle.tick_params(axis="y", labelcolor=angle_color)
 
         plt.tight_layout()
+        plt.savefig("pictures/flexion_extension_split.png")
         plt.show()
-        # # === Plotting ===
-        # fig, axs = plt.subplots(1, 2, figsize=(18, 5), sharey=True)
-        # axs[0].set_title("Flexion")
-        # axs[1].set_title("Extension")
 
-        # for trial in processed_trials:
-        #     axs[0].plot(trial["rising"]["angle"], trial["rising"]["torque"], alpha=0.7)
-        #     axs[1].plot(trial["falling"]["angle"], trial["falling"]["torque"], alpha=0.7)
+        return processed_trials
+    
+def process_split_trials(split_trials):
+    if not split_trials:
+        print("No trials to process.")
+        return
 
-        # axs[1].invert_xaxis() # for flexed to extended
-        # for ax in axs:
-        #     ax.set_xlabel("Angle (degrees)")
-        #     ax.set_ylabel("Torque (Nm)")
-        #     ax.grid(True)
+    # Filter: Keep only trials where the maximum angle (from all phases) is at least 80 degrees
+    filtered_trials = []
+    for trial in split_trials:
+        all_angles = np.concatenate([
+            trial["rising"]["angle"],
+            trial["flat"]["angle"],
+            trial["falling"]["angle"]
+        ])
+        if np.max(all_angles) >= 80:
+            filtered_trials.append(trial)
 
-        # plt.tight_layout()
-        # plt.show()
+    if not filtered_trials:
+        print("No trials passed the 80-degree flexion threshold.")
+        return
+
+    # Plotting
+    fig, axs = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+    axs[0].set_title("Flexion Phase (Rising) - Filtered")
+    axs[1].set_title("Extension Phase (Falling) - Filtered")
+
+    # Define common visual styles
+    torque_color = "tab:red"
+    angle_color = "tab:blue"
+    torque_alpha = 0.6
+    angle_alpha = 0.5
+    angle_style = "--"
+
+    for i, phase in enumerate(["rising", "falling"]):
+        ax_torque = axs[i]
+        ax_angle = ax_torque.twinx()
+
+        for trial in filtered_trials:
+            ax_torque.plot(
+                trial[phase]["time"],
+                trial[phase]["torque"],
+                color=torque_color,
+                alpha=torque_alpha,
+            )
+            ax_angle.plot(
+                trial[phase]["time"],
+                trial[phase]["angle"],
+                linestyle=angle_style,
+                color=angle_color,
+                alpha=angle_alpha,
+            )
+
+        ax_torque.set_xlabel("Time (s)")
+        ax_torque.set_ylabel("Torque (Nm)", color=torque_color)
+        ax_torque.tick_params(axis="y", labelcolor=torque_color)
+        ax_torque.grid(True)
+        ax_torque.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
+        ax_torque.ticklabel_format(style="plain", axis="x")
+
+        ax_angle.set_ylabel("Angle (deg)", color=angle_color)
+        ax_angle.tick_params(axis="y", labelcolor=angle_color)
+
+    plt.tight_layout()
+    plt.savefig("pictures/flexion_extension_filtered.png")
+    plt.show()
+
+    return filtered_trials
+
 
 def main():
     all_trials = read_all_trials()
     # plot_all_data(all_trials)
-    plot_tibiofemoral_data(all_trials)
-    normalize_data_by_flexion(all_trials)
+    # plot_tibiofemoral_data(all_trials)
+    flexion_split_trials = split_data_by_flexion(all_trials)
+    process_split_trials(flexion_split_trials)
     
 if __name__ == "__main__":
     main()
