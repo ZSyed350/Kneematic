@@ -544,6 +544,133 @@ def average_trials(smoothed_trials, num_points=200):
         }
     }
 
+def fit_linear_region(averaged_trial, smoothed_trials):
+    """
+    Fits a linear equation to the averaged rising and falling phases between 10 and 80 degrees.
+    Overlays the fit and displays the equation on the plot.
+    Returns a dict with slope and intercept for each phase.
+    """
+    results = {}
+
+    fig, axs = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+    axs[0].set_title("Flexion Phase (Rising)")
+    axs[1].set_title("Extension Phase (Falling)")
+
+    color_smoothed = "tab:red"
+    color_avg = "black"
+    color_fit = "limegreen"
+
+    for i, phase in enumerate(["rising", "falling"]):
+        avg_angle = averaged_trial[phase]["angle"]
+        avg_torque = averaged_trial[phase]["torque"]
+
+        # Select data in [10, 80] degrees
+        mask = (avg_angle >= 10) & (avg_angle <= 80)
+        x = avg_angle[mask]
+        y = avg_torque[mask]
+
+        # Fit line: torque = m * angle + b
+        if len(x) < 2:
+            print(f"Not enough data points for linear fit in {phase} phase.")
+            m, b = np.nan, np.nan
+        else:
+            m, b = np.polyfit(x, y, deg=1)
+            y_fit = m * x + b
+
+        results[phase] = {"slope": m, "intercept": b}
+
+        ax = axs[i]
+
+        # Plot all smoothed trials in light red
+        for trial in smoothed_trials:
+            ax.plot(trial[phase]["angle"], trial[phase]["torque"], color=color_smoothed, alpha=0.4)
+
+        # Plot averaged trial in black
+        ax.plot(avg_angle, avg_torque, color=color_avg, linewidth=2, label="Average")
+
+        # Plot linear fit in blue
+        if len(x) >= 2:
+            ax.plot(x, y_fit, color=color_fit, linewidth=2, linestyle='--', label="Linear Fit")
+            # Display equation on plot
+            equation_text = f"y = {m:.7f}x + {b:.7f}"
+            x_pos = x[int(len(x) * 0.05)]  # near start of fit
+            y_pos = y_fit[int(len(y_fit) * 0.05)]
+            ax.text(x_pos, y_pos, equation_text, color=color_fit, fontsize=10, fontweight="bold")
+
+        # Flip x-axis for falling phase
+        if phase == "falling":
+            ax.invert_xaxis()
+
+        ax.set_xlabel("Angle (degrees)")
+        ax.set_ylabel("Torque (Nm)")
+        ax.grid(True)
+        ax.legend()
+
+    plt.tight_layout()
+    plt.savefig("pictures/linear_fit_torque_vs_angle_labeled.png")
+    plt.show()
+
+    return results
+
+def fit_piecewise_flexion(averaged_trial, smoothed_trials):
+    """
+    Fits two separate linear equations to the rising (flexion) phase:
+    - One from 10 to 35 degrees
+    - One from 35 to 80 degrees
+    Returns both equations and plots them with the average and raw smoothed data.
+    """
+    phase = "rising"
+    angle = averaged_trial[phase]["angle"]
+    torque = averaged_trial[phase]["torque"]
+
+    # Masks for each segment
+    mask_10_35 = (angle >= 10) & (angle <= 35)
+    mask_35_80 = (angle >= 35) & (angle <= 80)
+
+    x1, y1 = angle[mask_10_35], torque[mask_10_35]
+    x2, y2 = angle[mask_35_80], torque[mask_35_80]
+
+    # Fit lines
+    m1, b1 = np.polyfit(x1, y1, deg=1) if len(x1) >= 2 else (np.nan, np.nan)
+    m2, b2 = np.polyfit(x2, y2, deg=1) if len(x2) >= 2 else (np.nan, np.nan)
+
+    y1_fit = m1 * x1 + b1 if not np.isnan(m1) else None
+    y2_fit = m2 * x2 + b2 if not np.isnan(m2) else None
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    plt.title("Piecewise Linear Fit – Flexion Phase (Rising)")
+
+    # Plot smoothed raw data
+    for trial in smoothed_trials:
+        plt.plot(trial["rising"]["angle"], trial["rising"]["torque"], color="tab:red", alpha=0.3)
+
+    # Plot average
+    plt.plot(angle, torque, color="black", linewidth=2, label="Average")
+
+    # Plot fits
+    if y1_fit is not None:
+        plt.plot(x1, y1_fit, color="limegreen", linestyle='--', linewidth=2,
+                 label=f"Fit 10–35°: y = {m1:.7f}x + {b1:.7f}")
+        plt.text(x1[1], y1_fit[1], f"{m1:.7f}x + {b1:.7f}", color="limegreen", fontsize=10, fontweight="bold")
+    if y2_fit is not None:
+        plt.plot(x2, y2_fit, color="cyan", linestyle='--', linewidth=2,
+                 label=f"Fit 35–80°: y = {m2:.7f}x + {b2:.7f}")
+        plt.text(x2[1], y2_fit[1], f"{m2:.7f}x + {b2:.7f}", color="cyan", fontsize=10, fontweight="bold")
+
+    plt.xlabel("Angle (degrees)")
+    plt.ylabel("Torque (Nm)")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("pictures/piecewise_flexion_fit.png")
+    plt.show()
+
+    return {
+        "segment_10_35": {"slope": m1, "intercept": b1},
+        "segment_35_80": {"slope": m2, "intercept": b2}
+    }
+
 def main():
     all_trials = read_all_trials()
     # plot_all_data(all_trials)
@@ -553,7 +680,9 @@ def main():
     plot_torque_vs_angle(filtered_trials, "pictures/torque_vs_angle_normalized.png")
     smooth_trials = smooth_signals(filtered_trials, window_size=250)
     plot_torque_vs_angle(smooth_trials, "pictures/torque_vs_angle_smooth.png")
-    average_trials(smooth_trials)
+    average_trial = average_trials(smooth_trials)
+    equations = fit_linear_region(average_trial, smooth_trials)
+    piecewise_results = fit_piecewise_flexion(average_trial, smooth_trials)
     
 if __name__ == "__main__":
     main()
