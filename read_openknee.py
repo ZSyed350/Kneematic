@@ -26,7 +26,7 @@ PRINT_TDMS = False
 # TODO confirm the units of dt
 DATA_ROOT = "OpenKneeData"
 DATA_MAP = "datamap.json"
-VERBOSE = True
+VERBOSE = False
 
 # Color map by joint type and optimization status
 COLOR_SCHEME = {
@@ -304,7 +304,7 @@ def split_data_by_flexion(all_trials):
         plt.savefig("pictures/flexion_extension_split.png")
         plt.show()
 
-        return processed_trials
+    return processed_trials
     
 def process_split_trials(split_trials):
     if not split_trials:
@@ -325,58 +325,60 @@ def process_split_trials(split_trials):
     if not filtered_trials:
         print("No trials passed the 80-degree flexion threshold.")
         return
+    
+    if VERBOSE:
 
-    # Plotting
-    fig, axs = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
-    axs[0].set_title("Flexion Phase (Rising) - Filtered")
-    axs[1].set_title("Extension Phase (Falling) - Filtered")
+        # Plotting
+        fig, axs = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+        axs[0].set_title("Flexion Phase (Rising) - Filtered")
+        axs[1].set_title("Extension Phase (Falling) - Filtered")
 
-    # Define common visual styles
-    torque_color = "tab:red"
-    angle_color = "tab:blue"
-    torque_alpha = 0.6
-    angle_alpha = 0.5
-    angle_style = "--"
+        # Define common visual styles
+        torque_color = "tab:red"
+        angle_color = "tab:blue"
+        torque_alpha = 0.6
+        angle_alpha = 0.5
+        angle_style = "--"
 
-    for i, phase in enumerate(["rising", "falling"]):
-        ax_torque = axs[i]
-        ax_angle = ax_torque.twinx()
+        for i, phase in enumerate(["rising", "falling"]):
+            ax_torque = axs[i]
+            ax_angle = ax_torque.twinx()
 
-        for trial in filtered_trials:
-            ax_torque.plot(
-                trial[phase]["time"],
-                trial[phase]["torque"],
-                color=torque_color,
-                alpha=torque_alpha,
-            )
-            ax_angle.plot(
-                trial[phase]["time"],
-                trial[phase]["angle"],
-                linestyle=angle_style,
-                color=angle_color,
-                alpha=angle_alpha,
-            )
+            for trial in filtered_trials:
+                ax_torque.plot(
+                    trial[phase]["time"],
+                    trial[phase]["torque"],
+                    color=torque_color,
+                    alpha=torque_alpha,
+                )
+                ax_angle.plot(
+                    trial[phase]["time"],
+                    trial[phase]["angle"],
+                    linestyle=angle_style,
+                    color=angle_color,
+                    alpha=angle_alpha,
+                )
 
-        ax_torque.set_xlabel("Time (s)")
-        ax_torque.set_ylabel("Torque (Nm)", color=torque_color)
-        ax_torque.tick_params(axis="y", labelcolor=torque_color)
-        ax_torque.grid(True)
-        ax_torque.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
-        ax_torque.ticklabel_format(style="plain", axis="x")
+            ax_torque.set_xlabel("Time (s)")
+            ax_torque.set_ylabel("Torque (Nm)", color=torque_color)
+            ax_torque.tick_params(axis="y", labelcolor=torque_color)
+            ax_torque.grid(True)
+            ax_torque.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
+            ax_torque.ticklabel_format(style="plain", axis="x")
 
-        ax_angle.set_ylabel("Angle (deg)", color=angle_color)
-        ax_angle.tick_params(axis="y", labelcolor=angle_color)
+            ax_angle.set_ylabel("Angle (deg)", color=angle_color)
+            ax_angle.tick_params(axis="y", labelcolor=angle_color)
 
-    plt.tight_layout()
-    plt.savefig("pictures/flexion_extension_filtered.png")
-    plt.show()
+        plt.tight_layout()
+        plt.savefig("pictures/flexion_extension_filtered.png")
+        plt.show()
 
     return filtered_trials
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 
-def plot_torque_vs_angle_normalized(filtered_trials):
+def plot_torque_vs_angle(filtered_trials, savepath):
     if not filtered_trials:
         print("No filtered trials to plot.")
         return
@@ -417,8 +419,130 @@ def plot_torque_vs_angle_normalized(filtered_trials):
         ax.ticklabel_format(style="plain", axis="x")
 
     plt.tight_layout()
-    plt.savefig("pictures/torque_vs_angle_normalized.png")
+    plt.savefig(savepath)
     plt.show()
+
+def smooth_signals(filtered_trials, window_size=50):
+    """
+    Applies simple moving average to torque signals in each trial's rising and falling phases.
+    Returns a new list of trials with smoothed 'torque' arrays.
+    """
+    if not filtered_trials:
+        print("No trials to smooth.")
+        return []
+
+    def moving_average(x, w):
+        return np.convolve(x, np.ones(w) / w, mode='same')
+
+    smoothed_trials = []
+
+    for trial in filtered_trials:
+        new_trial = {}
+
+        for phase in ["rising", "flat", "falling"]:
+            angle = trial[phase]["angle"]
+            torque = trial[phase]["torque"]
+            time = trial[phase]["time"]
+
+            if phase in ["rising", "falling"] and len(torque) >= window_size:
+                smoothed_torque = moving_average(torque, window_size)
+            else:
+                smoothed_torque = torque  # unchanged for 'flat' or too-short segments
+
+            new_trial[phase] = {
+                "angle": angle,
+                "torque": smoothed_torque,
+                "time": time
+            }
+
+        smoothed_trials.append(new_trial)
+
+    return smoothed_trials
+
+def average_trials(smoothed_trials, num_points=200):
+    """
+    Interpolates and averages multiple smoothed trials over a common angle grid.
+    Plots all individual trials in red and the average in solid black.
+    Returns a dict with 'rising' and 'falling' averaged angle and torque arrays.
+    """
+    if not smoothed_trials:
+        print("No trials to average.")
+        return None
+
+    def average_phase(phase):
+        angle_sets = [trial[phase]["angle"] for trial in smoothed_trials]
+        torque_sets = [trial[phase]["torque"] for trial in smoothed_trials]
+
+        # Compute common overlapping range
+        min_angle = max(np.min(a) for a in angle_sets)
+        max_angle = min(np.max(a) for a in angle_sets)
+        if min_angle >= max_angle:
+            raise ValueError(f"Insufficient angle overlap in {phase} phase for averaging.")
+        
+        common_grid = np.linspace(min_angle, max_angle, num_points)
+        interpolated_torques = []
+
+        for angle, torque in zip(angle_sets, torque_sets):
+            if len(angle) < 2:
+                continue
+            try:
+                f_interp = interp1d(angle, torque, kind='linear', bounds_error=False, fill_value="extrapolate")
+                interpolated = f_interp(common_grid)
+                interpolated_torques.append(interpolated)
+            except Exception as e:
+                print(f"Skipping trial due to interpolation error: {e}")
+                continue
+
+        if not interpolated_torques:
+            return {"angle": common_grid, "torque": np.zeros_like(common_grid)}
+
+        mean_torque = np.mean(interpolated_torques, axis=0)
+        return {
+            "angle": common_grid,
+            "torque": mean_torque,
+            "all_interpolated": interpolated_torques  # for plotting
+        }
+
+    # Average both phases
+    avg_rising = average_phase("rising")
+    avg_falling = average_phase("falling")
+
+    # === Plotting ===
+    fig, axs = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+    axs[0].set_title("Flexion Phase (Rising)")
+    axs[1].set_title("Extension Phase (Falling)")
+
+    for interp in avg_rising["all_interpolated"]:
+        axs[0].plot(avg_rising["angle"], interp, color="tab:red", alpha=0.5)
+    axs[0].plot(avg_rising["angle"], avg_rising["torque"], color="black", linewidth=2, label="Average")
+
+    for interp in avg_falling["all_interpolated"]:
+        axs[1].plot(avg_falling["angle"], interp, color="tab:red", alpha=0.5)
+    axs[1].plot(avg_falling["angle"], avg_falling["torque"], color="black", linewidth=2, label="Average")
+    axs[1].invert_xaxis()
+
+    for ax in axs:
+        ax.set_xlabel("Angle (degrees)")
+        ax.set_ylabel("Torque (Nm)")
+        ax.grid(True)
+        ax.legend()
+        ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=False))
+        ax.ticklabel_format(style="plain", axis="x")
+
+    plt.tight_layout()
+    plt.savefig("pictures/averaged_torque_vs_angle.png")
+    plt.show()
+
+    return {
+        "rising": {
+            "angle": avg_rising["angle"],
+            "torque": avg_rising["torque"]
+        },
+        "falling": {
+            "angle": avg_falling["angle"],
+            "torque": avg_falling["torque"]
+        }
+    }
 
 def main():
     all_trials = read_all_trials()
@@ -426,7 +550,10 @@ def main():
     # plot_tibiofemoral_data(all_trials)
     flexion_split_trials = split_data_by_flexion(all_trials)
     filtered_trials = process_split_trials(flexion_split_trials)
-    plot_torque_vs_angle_normalized(filtered_trials)
+    plot_torque_vs_angle(filtered_trials, "pictures/torque_vs_angle_normalized.png")
+    smooth_trials = smooth_signals(filtered_trials, window_size=250)
+    plot_torque_vs_angle(smooth_trials, "pictures/torque_vs_angle_smooth.png")
+    average_trials(smooth_trials)
     
 if __name__ == "__main__":
     main()
