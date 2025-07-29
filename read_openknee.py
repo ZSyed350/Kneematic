@@ -671,6 +671,102 @@ def fit_piecewise_flexion(averaged_trial, smoothed_trials):
         "segment_35_80": {"slope": m2, "intercept": b2}
     }
 
+def fit_piecewise_flexion_and_extension(averaged_trial, smoothed_trials):
+    """
+    Fits two linear equations to the flexion (rising) phase:
+    - One from 10 to 35 degrees
+    - One from 35 to 80 degrees
+    Also fits one linear equation to the extension (falling) phase from 10 to 80 degrees.
+    Plots all smoothed trials, the average, and the fitted lines.
+    """
+    results = {}
+
+    fig, axs = plt.subplots(1, 2, figsize=(18, 6), sharey=True)
+    axs[0].set_title("Piecewise Linear Fit – Flexion Phase (Rising)")
+    axs[1].set_title("Linear Fit – Extension Phase (Falling)")
+
+    # === Flexion (Rising) ===
+    phase = "rising"
+    angle = averaged_trial[phase]["angle"]
+    torque = averaged_trial[phase]["torque"]
+
+    # Segment masks
+    mask_10_35 = (angle >= 10) & (angle <= 35)
+    mask_35_80 = (angle >= 35) & (angle <= 80)
+
+    x1, y1 = angle[mask_10_35], torque[mask_10_35]
+    x2, y2 = angle[mask_35_80], torque[mask_35_80]
+
+    m1, b1 = np.polyfit(x1, y1, deg=1) if len(x1) >= 2 else (np.nan, np.nan)
+    m2, b2 = np.polyfit(x2, y2, deg=1) if len(x2) >= 2 else (np.nan, np.nan)
+
+    y1_fit = m1 * x1 + b1 if not np.isnan(m1) else None
+    y2_fit = m2 * x2 + b2 if not np.isnan(m2) else None
+
+    # Plot all smoothed flexion trials
+    for trial in smoothed_trials:
+        axs[0].plot(trial["rising"]["angle"], trial["rising"]["torque"], color="tab:red", alpha=0.3)
+
+    # Plot average
+    axs[0].plot(angle, torque, color="black", linewidth=2, label="Average")
+
+    # Plot linear fits
+    if y1_fit is not None:
+        axs[0].plot(x1, y1_fit, color="limegreen", linestyle='--', linewidth=2,
+                    label=f"Fit 10–35°: y = {m1:.7f}x + {b1:.7f}")
+        axs[0].text(x1[1], y1_fit[1], f"{m1:.7f}x + {b1:.7f}", color="limegreen", fontsize=10, fontweight="bold")
+    if y2_fit is not None:
+        axs[0].plot(x2, y2_fit, color="cyan", linestyle='--', linewidth=2,
+                    label=f"Fit 35–80°: y = {m2:.7f}x + {b2:.7f}")
+        axs[0].text(x2[1], y2_fit[1], f"{m2:.7f}x + {b2:.7f}", color="cyan", fontsize=10, fontweight="bold")
+
+    axs[0].set_xlabel("Angle (degrees)")
+    axs[0].set_ylabel("Torque (Nm)")
+    axs[0].grid(True)
+    axs[0].legend()
+
+    results["segment_10_35"] = {"slope": m1, "intercept": b1}
+    results["segment_35_80"] = {"slope": m2, "intercept": b2}
+
+    # === Extension (Falling) ===
+    phase = "falling"
+    angle_ext = averaged_trial[phase]["angle"]
+    torque_ext = averaged_trial[phase]["torque"]
+
+    mask_ext = (angle_ext >= 10) & (angle_ext <= 80)
+    x_ext = angle_ext[mask_ext]
+    y_ext = torque_ext[mask_ext]
+
+    m_ext, b_ext = np.polyfit(x_ext, y_ext, deg=1) if len(x_ext) >= 2 else (np.nan, np.nan)
+    y_ext_fit = m_ext * x_ext + b_ext if not np.isnan(m_ext) else None
+
+    # Plot all smoothed extension trials
+    for trial in smoothed_trials:
+        axs[1].plot(trial["falling"]["angle"], trial["falling"]["torque"], color="tab:red", alpha=0.3)
+
+    # Plot average
+    axs[1].plot(angle_ext, torque_ext, color="black", linewidth=2, label="Average")
+
+    # Plot fit
+    if y_ext_fit is not None:
+        axs[1].plot(x_ext, y_ext_fit, color="limegreen", linestyle='--', linewidth=2,
+                    label=f"Fit 10–80°: y = {m_ext:.7f}x + {b_ext:.7f}")
+        axs[1].text(x_ext[1], y_ext_fit[1], f"{m_ext:.7f}x + {b_ext:.7f}", color="limegreen", fontsize=10, fontweight="bold")
+
+    axs[1].invert_xaxis()
+    axs[1].set_xlabel("Angle (degrees)")
+    axs[1].set_ylabel("Torque (Nm)")
+    axs[1].grid(True)
+    axs[1].legend()
+
+    results["falling_10_80"] = {"slope": m_ext, "intercept": b_ext}
+
+    plt.tight_layout()
+    plt.savefig("pictures/piecewise_flexion_and_extension_fit.png")
+    plt.show()
+
+    return results
+
 def main():
     all_trials = read_all_trials()
     # plot_all_data(all_trials)
@@ -682,7 +778,7 @@ def main():
     plot_torque_vs_angle(smooth_trials, "pictures/torque_vs_angle_smooth.png")
     average_trial = average_trials(smooth_trials)
     equations = fit_linear_region(average_trial, smooth_trials)
-    piecewise_results = fit_piecewise_flexion(average_trial, smooth_trials)
+    piecewise_results = fit_piecewise_flexion_and_extension(average_trial, smooth_trials)
     
 if __name__ == "__main__":
     main()
