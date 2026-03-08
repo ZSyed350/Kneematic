@@ -26,5 +26,6 @@ void sanity_check() {
       delay(30);
     }
     drive_PWM(0);
+    delay(30);
   }
 }
