@@ -6,4 +6,5 @@
 float pos2duty(float pos);
 float get_position();
 void drive_PWM(float d);
-void sanity_check();
+void EM_calibrate(float d);
+void EM_sanity_check();

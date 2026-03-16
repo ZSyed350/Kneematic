@@ -1,3 +1,6 @@
 #include <Arduino.h>
 
-float get_position();
+#define POT_PIN A0
+#define MAX_ANGLE 300  // FIXME
+
+float getAngle();
