@@ -1,10 +1,22 @@
+#ifndef EM_BRAKING_H
+#define EM_BRAKING_H
+
 #include <Arduino.h>
 
 #define PWM_PIN 3
 #define FULL_ROM 140.0f
 
-float pos2duty(float pos, int dir);
-float get_position();
-void drive_PWM(float d);
-void EM_calibrate(float d);
-void EM_sanity_check();
+class EM {
+public:
+    EM();
+    float EM_main();
+
+private:
+    int dir;              // 1 = flexion, -1 = extension
+    int prev_pos;
+
+    void drive_PWM(float d);
+    float pos2duty(float pos);
+};
+
+#endif
