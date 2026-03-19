@@ -1,10 +1,28 @@
 #include "em_braking.h"
 #include "knee_position.h"
 
-float pos2duty(float pos) {
-  if (pos <= 0.0f) { return 0.0f; }
-  if (pos >= FULL_REV) { return 1.0f; }
-  return (pos / FULL_REV);
+// 1 = flexion, -1 = extension
+float pos2duty(float pos, int dir) {
+  // EDGE CASES
+  if (pos <= 10.0f) { return 0.0f; }
+  if (pos >= 140.0) { return 1.0f; }
+
+  float torque;
+  if (dir == -1 && pos < 35.0) {
+    torque = -0.0112489 * pos - 0.4566268;
+  }
+  else if (dir == -1 && pos >= 35.0) {
+    torque = -0.0016906 * pos - 0.8225945;
+  }
+  else {
+    torque = -0.0098249 * pos - 0.4571999;
+  }
+
+  // map torque to calibrated duty cycle here
+  // temp
+  float duty = pos / FULL_ROM
+
+  return duty;
 }
 
 void drive_PWM(float d) {

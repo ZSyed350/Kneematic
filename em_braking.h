@@ -1,9 +1,9 @@
 #include <Arduino.h>
 
 #define PWM_PIN 3
-#define FULL_REV 360.0f
+#define FULL_ROM 140.0f
 
-float pos2duty(float pos);
+float pos2duty(float pos, int dir);
 float get_position();
 void drive_PWM(float d);
 void EM_calibrate(float d);
