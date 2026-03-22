@@ -1,6 +1,7 @@
 import numpy as np
 import open3d as o3d
 
+EPS = 1e-8
 
 def compute_pca(points: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -154,3 +155,121 @@ def remove_points_in_cylinder_volume(
         filtered_pcd.normals = o3d.utility.Vector3dVector(normals[~inside_mask])
 
     return filtered_pcd, inside_mask, segment_start, segment_end
+
+def normalize(v: np.ndarray) -> np.ndarray:
+    v = np.asarray(v, dtype=float)
+    n = np.linalg.norm(v)
+    if n < EPS:
+        raise ValueError("Cannot normalize a near-zero vector.")
+    return v / n
+
+def plane_from_axes(
+    long_axis_1: np.ndarray,
+    long_axis_2: np.ndarray,
+    point_on_plane: np.ndarray = None,
+):
+    """
+    Define a plane such that:
+      - long_axis_1 lies in the plane
+      - long_axis_2 is parallel to the plane
+
+    Since both vectors must be parallel to the plane, the plane normal is
+    perpendicular to both, i.e. cross(long_axis_1, long_axis_2).
+
+    Args:
+        long_axis_1: direction vector that must lie in the plane
+        long_axis_2: direction vector that must be parallel to the plane
+        point_on_plane: any point on the plane (default = origin)
+
+    Returns:
+        plane_point: point on plane
+        plane_normal: unit normal vector
+        relationship: string describing whether axes are parallel or not
+    """
+    a1 = normalize(long_axis_1)
+    a2 = normalize(long_axis_2)
+
+    cross = np.cross(a1, a2)
+    cross_norm = np.linalg.norm(cross)
+
+    if point_on_plane is None:
+        plane_point = np.zeros(3)
+    else:
+        plane_point = np.asarray(point_on_plane, dtype=float)
+
+    if cross_norm < EPS:
+        print("long_axis_1 and long_axis_2 are parallel (or anti-parallel).")
+        print("There is no unique plane from the two axes alone.")
+
+        # choose any normal perpendicular to long_axis_1
+        trial = np.array([1.0, 0.0, 0.0])
+        if abs(np.dot(trial, a1)) > 0.9:
+            trial = np.array([0.0, 1.0, 0.0])
+
+        plane_normal = normalize(np.cross(a1, trial))
+        relationship = "parallel"
+
+    else:
+        print("long_axis_1 and long_axis_2 are not parallel.")
+        plane_normal = normalize(cross)
+        relationship = "not_parallel"
+
+    return plane_point, plane_normal, relationship
+
+def create_plane_mesh_from_point_normal(
+    plane_point: np.ndarray,
+    plane_normal: np.ndarray,
+    width: float = 200.0,
+    height: float = 200.0,
+    color: tuple = (0.7, 0.7, 0.7),
+):
+    """
+    Create an Open3D rectangular plane mesh from a point and normal.
+
+    Args:
+        plane_point: (3,) point on the plane
+        plane_normal: (3,) normal vector of the plane
+        width: plane width
+        height: plane height
+        color: RGB tuple in [0, 1]
+
+    Returns:
+        plane_mesh: open3d.geometry.TriangleMesh
+    """
+    plane_point = np.asarray(plane_point, dtype=float)
+    n = normalize(plane_normal)
+
+    # Pick a vector not parallel to n
+    trial = np.array([1.0, 0.0, 0.0])
+    if abs(np.dot(trial, n)) > 0.9:
+        trial = np.array([0.0, 1.0, 0.0])
+
+    # Create two orthonormal in-plane directions
+    u = np.cross(n, trial)
+    u = normalize(u)
+    v = np.cross(n, u)
+    v = normalize(v)
+
+    hw = width / 2.0
+    hh = height / 2.0
+
+    # Four corners of rectangle
+    corners = np.array([
+        plane_point - hw * u - hh * v,
+        plane_point + hw * u - hh * v,
+        plane_point + hw * u + hh * v,
+        plane_point - hw * u + hh * v,
+    ])
+
+    triangles = np.array([
+        [0, 1, 2],
+        [0, 2, 3],
+    ])
+
+    plane_mesh = o3d.geometry.TriangleMesh()
+    plane_mesh.vertices = o3d.utility.Vector3dVector(corners)
+    plane_mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    plane_mesh.paint_uniform_color(color)
+    plane_mesh.compute_vertex_normals()
+
+    return plane_mesh

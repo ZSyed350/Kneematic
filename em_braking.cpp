@@ -1,6 +1,8 @@
 #include "em_braking.h"
 #include "knee_position.h"
 
+#define SAFETY_FACTOR 0.3
+
 EM::EM() {
     dir = 1;
     prev_pos = 0;
@@ -46,7 +48,7 @@ float EM::pos2duty(float pos) {
 
   // map torque to calibrated duty cycle here
   // temp
-  float duty = pos / FULL_ROM;
+  float duty = (pos / FULL_ROM) * SAFETY_FACTOR;
 
   return duty;
 }
