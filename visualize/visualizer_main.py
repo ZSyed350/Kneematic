@@ -1,7 +1,6 @@
 import open3d as o3d
 import numpy as np
 import os
-import time
 
 import compute
 import camera
@@ -80,9 +79,6 @@ if __name__ == "__main__":
     _, foot_axis, foot_start, foot_end = compute.get_long_axis(foot_points)
     foot_line = compute.create_line_set(foot_start, foot_end, color=(0.0, 0.0, 0.0))
 
-    vis = o3d.visualization.Visualizer()
-    vis.create_window(window_name="JBOSINO", width=WIDTH, height=HEIGHT)
-
     # Get plane of rotation
     plane_point, plane_normal, _ = compute.plane_from_axes(
         leg_axis,
@@ -113,6 +109,8 @@ if __name__ == "__main__":
 
     thigh_pcd = animate.make_pcd(thigh_points, (1.0, 0.0, 0.0))
     shin_pcd  = animate.make_pcd(shin_points,  (0.0, 0.2, 1.0))
+    thigh_pcd = animate.color_points_by_distance_from_center(thigh_pcd, KNEE_CENTER)
+    shin_pcd  = animate.color_points_by_distance_from_center(shin_pcd, KNEE_CENTER)
 
     # Base copy so rotation never accumulates drift
     shin_base_points = shin_points.copy()
@@ -130,17 +128,27 @@ if __name__ == "__main__":
     rot_axis = np.asarray(plane_normal, dtype=float)
     rot_axis = rot_axis / np.linalg.norm(rot_axis)
 
+    # VISUALIZE ------------------------------------------------------
+    vis = o3d.visualization.Visualizer()
+    vis.create_window(window_name="JBOSINO", width=WIDTH, height=HEIGHT)
+
+    vc = vis.get_view_control()
+    front, up = camera.compute_camera_vectors(leg_axis)
+
+    vc.set_lookat(KNEE_CENTER)
+    vc.set_up(up)
+    vc.set_front(front)
+    vc.set_zoom(ZOOM)
+
     geometries = [
         thigh_pcd,
         shin_pcd,
-        thigh_line,
-        shin_line,
-        rotation_plane_mesh,
     ]
     for g in geometries:
         vis.add_geometry(g)
 
     opt = vis.get_render_option()
+    opt.background_color = np.array([0.0, 0.0, 0.0])
     opt.point_size = 3.0
     opt.mesh_show_back_face = True
 
@@ -151,56 +159,67 @@ if __name__ == "__main__":
         fps=FPS,
     )
 
-    while True:
-        for angle_deg in angles:
-            # Reset shin points from base
-            current_shin = shin_base_points.copy()
+    frame_idx = {"i": 0}
 
-            # Axis-angle rotation about plane normal
-            theta = -np.deg2rad(angle_deg)
-            R = o3d.geometry.get_rotation_matrix_from_axis_angle(rot_axis * theta)
-            T = animate.rotation_about_point(R, knee_center)
+    def animate_callback(vis):
+        i = frame_idx["i"] % len(angles)
+        angle_deg = angles[i]
 
-            # Rotate shin point cloud
-            current_shin_h = np.c_[current_shin, np.ones(len(current_shin))]
-            current_shin = (T @ current_shin_h.T).T[:, :3]
-            shin_pcd.points = o3d.utility.Vector3dVector(current_shin)
+        # Reset shin points from base
+        current_shin = shin_base_points.copy()
 
-            # Rotate shin axis line too
-            shin_line_pts = shin_line_base.copy()
-            shin_line_h = np.c_[shin_line_pts, np.ones(len(shin_line_pts))]
-            shin_line_pts = (T @ shin_line_h.T).T[:, :3]
-            shin_line.points = o3d.utility.Vector3dVector(shin_line_pts)
+        # Axis-angle rotation about plane normal
+        theta = -np.deg2rad(angle_deg)
+        R = o3d.geometry.get_rotation_matrix_from_axis_angle(rot_axis * theta)
+        T = animate.rotation_about_point(R, knee_center)
 
-            vis.update_geometry(shin_pcd)
-            vis.update_geometry(shin_line)
-            vis.poll_events()
-            vis.update_renderer()
-            time.sleep(1.0 / FPS)
+        # Rotate shin point cloud
+        current_shin_h = np.c_[current_shin, np.ones(len(current_shin))]
+        current_shin = (T @ current_shin_h.T).T[:, :3]
+        shin_pcd.points = o3d.utility.Vector3dVector(current_shin)
 
-        vis.run()
+        # Rotate shin axis line too
+        # shin_line_pts = shin_line_base.copy()
+        # shin_line_h = np.c_[shin_line_pts, np.ones(len(shin_line_pts))]
+        # shin_line_pts = (T @ shin_line_h.T).T[:, :3]
+        # shin_line.points = o3d.utility.Vector3dVector(shin_line_pts)
 
+        vis.update_geometry(shin_pcd)
+        # vis.update_geometry(shin_line)
 
+        frame_idx["i"] += 1
+        return False
+    
+    vis.register_animation_callback(animate_callback)
+    vis.run()
+    vis.destroy_window()
 
-    # # VISUALIZE
+    # while True:
+    #     for angle_deg in angles:
+    #         # Reset shin points from base
+    #         current_shin = shin_base_points.copy()
 
-    # geometries = [pcd, axis_line, foot_line, rotation_plane_mesh]
-    # for g in geometries:
-    #     vis.add_geometry(g)
+    #         # Axis-angle rotation about plane normal
+    #         theta = -np.deg2rad(angle_deg)
+    #         R = o3d.geometry.get_rotation_matrix_from_axis_angle(rot_axis * theta)
+    #         T = animate.rotation_about_point(R, knee_center)
 
-    # vc = vis.get_view_control()
-    # front, up = camera.compute_camera_vectors(leg_axis)
+    #         # Rotate shin point cloud
+    #         current_shin_h = np.c_[current_shin, np.ones(len(current_shin))]
+    #         current_shin = (T @ current_shin_h.T).T[:, :3]
+    #         shin_pcd.points = o3d.utility.Vector3dVector(current_shin)
 
-    # vc.set_lookat(KNEE_CENTER)
-    # vc.set_up(up)
-    # vc.set_front(front)
-    # vc.set_zoom(ZOOM)
+    #         # Rotate shin axis line too
+    #         shin_line_pts = shin_line_base.copy()
+    #         shin_line_h = np.c_[shin_line_pts, np.ones(len(shin_line_pts))]
+    #         shin_line_pts = (T @ shin_line_h.T).T[:, :3]
+    #         shin_line.points = o3d.utility.Vector3dVector(shin_line_pts)
 
-    # vis.run()
-    # vis.destroy_window()
+    #         vis.update_geometry(shin_pcd)
+    #         vis.update_geometry(shin_line)
+    #         vis.poll_events()
+    #         vis.update_renderer()
+    #         time.sleep(1.0 / FPS)
 
-    if not os.path.exists(PROCESSED_PCD):
-        o3d.io.write_point_cloud(PROCESSED_PCD, pcd)
-    if not os.path.exists(AXIS):
-        o3d.io.write_line_set(AXIS, axis_line)
+    #     vis.run()
     

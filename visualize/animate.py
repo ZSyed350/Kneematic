@@ -59,3 +59,22 @@ def make_line(start: np.ndarray, end: np.ndarray, color=(0, 0, 0)):
     ls.lines = o3d.utility.Vector2iVector(np.array([[0, 1]]))
     ls.colors = o3d.utility.Vector3dVector([color])
     return ls
+
+import matplotlib.cm as cm
+
+def color_points_by_distance_from_center(pcd, center):
+    points = np.asarray(pcd.points)
+    center = np.asarray(center, dtype=float)
+
+    dist = np.linalg.norm(points - center, axis=1)
+
+    d_min, d_max = dist.min(), dist.max()
+    if d_max - d_min < 1e-8:
+        dist_norm = np.zeros_like(dist)
+    else:
+        dist_norm = (dist - d_min) / (d_max - d_min)
+
+    colors = cm.get_cmap("viridis")(dist_norm)[:, :3]
+    pcd.colors = o3d.utility.Vector3dVector(colors)
+    return pcd
+
