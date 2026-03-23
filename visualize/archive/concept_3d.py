@@ -102,7 +102,7 @@ if __name__ == "__main__":
     foot_line = compute.create_line_set(foot_start, foot_end, color=(0.0, 0.0, 0.0))
 
     # Get plane of rotation
-    plane_point, plane_normal, _ = compute.plane_from_axes(
+    plane_point, plane_normal = compute.plane_from_axes(
         leg_axis,
         foot_axis,
         point_on_plane=KNEE_CENTER

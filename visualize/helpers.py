@@ -24,7 +24,7 @@ def compute_camera_vectors(long_axis: np.ndarray) -> tuple[np.ndarray, np.ndarra
 
     return front, up
 
-def process_line(line: str):
+def process_line(line: str, verbose: bool = True):
     """Chip, S0, S1, S2, S3, S4, S5, pos"""
     data = line.split(',')
     chip = int(data[0])
@@ -35,6 +35,7 @@ def process_line(line: str):
     s4 = float(data[5])
     s5 = float(data[6])
     pos = float(data[7])
+    if verbose: print(f'chip: {chip} | s0: {s0} | s1: {s1} | pos {pos}')
     return chip, s0, s1, s2, s3, s4, s5, pos
 
 def rotation_about_point(R: np.ndarray, p: np.ndarray) -> np.ndarray:

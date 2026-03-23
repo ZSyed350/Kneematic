@@ -5,11 +5,12 @@ from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 import matplotlib.cm as cm
 import serial
+import time
 
 import helpers
 import visualize_3d as v3d
 
-NUM_CHIPS = 6
+NUM_CHIPS = 2
 SAMPLE = "visualize/generated_data.txt"
 
 # Layout settings
@@ -23,7 +24,7 @@ def initialize_PCAP_visualization(num_chips):
     fig, (ax, angle_ax) = plt.subplots(
         1, 2,
         figsize=(fig_width * 1.8, 6),
-        gridspec_kw={'width_ratios': [4, 1]}
+        gridspec_kw={'width_ratios': [2, 1]}
     )
 
     norm = Normalize(vmin=0, vmax=100)
@@ -181,12 +182,17 @@ if __name__ == "__main__":
     arduino = serial.Serial(port='COM5', baudrate=115200, timeout=.1)
     data = arduino.readline().decode('utf-8').strip()
     while not data:
+        print("Waiting for data...")
+        time.sleep(1)
         data = arduino.readline().decode('utf-8').strip()
-    while data:
+    count = 0
+    while True:
+        data = arduino.readline().decode('utf-8').strip()
+        print(data)
         try:
-            chip, s0, s1, s2, s3, s4, s5, pos = helpers.process_line(data)
+            chip, s0, s1, s2, s3, s4, s5, pos = helpers.process_line(data, verbose=False)
         except:
-            print("[ERROR] Failed to read line.")
+            print("[ERROR]: No useful data")
             continue
         update_chip_visualization(
             chip, s0, s1, s2, s3, s4, s5,
@@ -194,8 +200,13 @@ if __name__ == "__main__":
         )
         update_angle(thigh_line, shin_line, pos)
 
-        v3d.update_3d_angle(state_3d, pos)
-        v3d.render_3d(state_3d)
+        if count==2:
+            v3d.update_3d_angle(state_3d, -pos)
+            v3d.render_3d(state_3d)
+            count = 0
+        else:
+            count+=1
 
+        # plt.pause(0.001)
         fig.canvas.draw_idle()
         fig.canvas.flush_events()

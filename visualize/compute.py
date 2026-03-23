@@ -184,7 +184,6 @@ def plane_from_axes(
     Returns:
         plane_point: point on plane
         plane_normal: unit normal vector
-        relationship: string describing whether axes are parallel or not
     """
     a1 = normalize(long_axis_1)
     a2 = normalize(long_axis_2)
@@ -207,14 +206,12 @@ def plane_from_axes(
             trial = np.array([0.0, 1.0, 0.0])
 
         plane_normal = normalize(np.cross(a1, trial))
-        relationship = "parallel"
 
     else:
         print("long_axis_1 and long_axis_2 are not parallel.")
         plane_normal = normalize(cross)
-        relationship = "not_parallel"
 
-    return plane_point, plane_normal, relationship
+    return plane_point, plane_normal
 
 def create_plane_mesh_from_point_normal(
     plane_point: np.ndarray,

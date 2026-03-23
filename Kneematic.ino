@@ -5,7 +5,7 @@
 #include "em_braking.h"
 
 #define BAUD_RATE 115200
-#define PRINT_SLOWER 0
+#define PRINT_SLOWER 1
 
 // Global EM instance
 EM em;
@@ -99,9 +99,9 @@ void setup() {
     Serial.begin(BAUD_RATE);
     delay(2000);  // Wait for serial monitor
 
-    Serial.println(F("========================================"));
-    Serial.println(F("PCAP04 Firmware Starting..."));
-    Serial.println(F("========================================"));
+    // Serial.println(F("========================================"));
+    // Serial.println(F("PCAP04 Firmware Starting..."));
+    // Serial.println(F("========================================"));
 
     // Initialize the PCAP driver
     pcap.begin();

@@ -10,7 +10,7 @@ EM::EM() {
 }
 
 float EM::EM_main() {
-  float pos = getAngle() - initial_angle;
+  float pos = getAngle() - 215.0;
 
   // update dir
   if (pos > prev_pos) { dir = 1; } // so long as angle is increasing, knee is in flexion
