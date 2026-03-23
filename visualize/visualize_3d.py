@@ -3,8 +3,7 @@ import numpy as np
 import os
 
 import compute
-import camera
-import animate
+import helpers
 
 # PATHS
 STL_FILE = "models/Leg_Reduced_mesh.STL"
@@ -50,7 +49,7 @@ def apply_knee_angle(
     # Use negative sign because that is the bend direction you wanted
     theta = -np.deg2rad(angle_deg)
     R = o3d.geometry.get_rotation_matrix_from_axis_angle(rot_axis * theta)
-    T = animate.rotation_about_point(R, knee_center)
+    T = helpers.rotation_about_point(R, knee_center)
 
     # Rotate shin point cloud
     current_shin_h = np.c_[current_shin, np.ones(len(current_shin))]
@@ -118,7 +117,7 @@ def initialize_3d():
     points = np.asarray(pcd.points)
 
     # Split remaining leg cloud into thigh and shin
-    thigh_mask, shin_mask = animate.split_thigh_shin(
+    thigh_mask, shin_mask = helpers.split_thigh_shin(
         points=points,
         knee_center=knee_center,
         leg_axis=leg_axis,
@@ -128,22 +127,22 @@ def initialize_3d():
     thigh_points = points[thigh_mask]
     shin_points = points[shin_mask]
 
-    thigh_pcd = animate.make_pcd(thigh_points, (1.0, 0.0, 0.0))
-    shin_pcd  = animate.make_pcd(shin_points,  (0.0, 0.2, 1.0))
-    thigh_pcd = animate.color_points_by_distance_from_center(thigh_pcd, KNEE_CENTER)
-    shin_pcd  = animate.color_points_by_distance_from_center(shin_pcd, KNEE_CENTER)
+    thigh_pcd = helpers.make_pcd(thigh_points, (1.0, 0.0, 0.0))
+    shin_pcd  = helpers.make_pcd(shin_points,  (0.0, 0.2, 1.0))
+    thigh_pcd = helpers.color_points_by_distance_from_center(thigh_pcd, KNEE_CENTER)
+    shin_pcd  = helpers.color_points_by_distance_from_center(shin_pcd, KNEE_CENTER)
 
     # Base copy so rotation never accumulates drift
     shin_base_points = shin_points.copy()
 
     # Shin long axis line from the shin points, not the foot-only points
     _, shin_axis, shin_start, shin_end = compute.get_long_axis(shin_points)
-    shin_line = animate.make_line(shin_start, shin_end, color=(0.0, 0.0, 0.0))
+    shin_line = helpers.make_line(shin_start, shin_end, color=(0.0, 0.0, 0.0))
     shin_line_base = np.vstack([shin_start, shin_end]).copy()
 
     # Thigh line is optional but helpful
     _, thigh_axis, thigh_start, thigh_end = compute.get_long_axis(thigh_points)
-    thigh_line = animate.make_line(thigh_start, thigh_end, color=(0.0, 0.0, 0.0))
+    thigh_line = helpers.make_line(thigh_start, thigh_end, color=(0.0, 0.0, 0.0))
 
     # Rotation axis = plane normal
     rot_axis = np.asarray(plane_normal, dtype=float)
@@ -154,7 +153,7 @@ def initialize_3d():
     vis.create_window(window_name="JBOSINO", width=WIDTH, height=HEIGHT)
 
     vc = vis.get_view_control()
-    front, up = camera.compute_camera_vectors(leg_axis)
+    front, up = helpers.compute_camera_vectors(leg_axis)
 
     vc.set_lookat(KNEE_CENTER)
     vc.set_up(up)

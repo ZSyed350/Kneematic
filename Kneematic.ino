@@ -218,7 +218,6 @@ void printResults(float pos) {
             Serial.print(F(","));
         }
         Serial.print(pos);
-        Serial.print(F(","));
         Serial.println();
     }
 }

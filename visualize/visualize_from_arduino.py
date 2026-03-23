@@ -4,8 +4,9 @@ from matplotlib.patches import Rectangle
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 import matplotlib.cm as cm
+import serial
 
-import process_data
+import helpers
 import visualize_3d as v3d
 
 NUM_CHIPS = 6
@@ -173,17 +174,17 @@ def update_angle(thigh_line, shin_line, angle_deg):
 if __name__ == "__main__":
     fig, ax, angle_ax, thigh_line, shin_line, knee_point, cell_rects, cell_texts, cmap, norm = initialize_PCAP_visualization(NUM_CHIPS)
     state_3d = v3d.initialize_3d()
-
-    # READ DATA - TO SIMULATE READING FROM A SERIAL MONITOR
-    with open(SAMPLE, 'r', encoding='utf-8') as file:
-        content = file.read()
-    lines = content.split('\n')
-
     plt.ion()
     plt.show(block=False)
-    for line in lines:
+
+    # READ FROM ARDUINO
+    arduino = serial.Serial(port='COM5', baudrate=115200, timeout=.1)
+    data = arduino.readline().decode('utf-8').strip()
+    while not data:
+        data = arduino.readline().decode('utf-8').strip()
+    while data:
         try:
-            chip, s0, s1, s2, s3, s4, s5, pos = process_data.process_line(line)
+            chip, s0, s1, s2, s3, s4, s5, pos = helpers.process_line(data)
         except:
             print("[ERROR] Failed to read line.")
             continue

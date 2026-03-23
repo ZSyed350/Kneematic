@@ -1,47 +1,47 @@
-import open3d as o3d
 import numpy as np
+import open3d as o3d
 import matplotlib.cm as cm
 
+def compute_camera_vectors(long_axis: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute camera front and up vectors so the long axis appears vertical on screen.
+    
+    Returns:
+        front: viewing direction
+        up:    screen-up direction
+    """
+    up = np.asarray(long_axis, dtype=float)
+    up = up / np.linalg.norm(up)
 
-class AngleSource:
-    def get_angle_deg(self) -> float:
-        raise NotImplementedError
+    # Pick a helper vector not parallel to up
+    helper = np.array([1.0, 0.0, 0.0])
+    if abs(np.dot(helper, up)) > 0.9:
+        helper = np.array([0.0, 1.0, 0.0])
 
-class GeneratedAngleSource(AngleSource):
-    def __init__(self, angles):
-        self.angles = np.asarray(angles, dtype=float)
-        self.i = 0
+    # Make front perpendicular to up
+    front = np.cross(up, helper)
+    front = front / np.linalg.norm(front)
 
-    def get_angle_deg(self) -> float:
-        angle = self.angles[self.i % len(self.angles)]
-        self.i += 1
-        return float(angle)
+    return front, up
 
-class LiveAngleSource(AngleSource):
-    def __init__(self, initial_angle_deg: float = 0.0):
-        self.current_angle_deg = float(initial_angle_deg)
-
-    def update_angle(self, angle_deg: float):
-        self.current_angle_deg = float(angle_deg)
-
-    def get_angle_deg(self) -> float:
-        return self.current_angle_deg
+def process_line(line: str):
+    """Chip, S0, S1, S2, S3, S4, S5, pos"""
+    data = line.split(',')
+    chip = int(data[0])
+    s0 = float(data[1])
+    s1 = float(data[2])
+    s2 = float(data[3])
+    s3 = float(data[4])
+    s4 = float(data[5])
+    s5 = float(data[6])
+    pos = float(data[7])
+    return chip, s0, s1, s2, s3, s4, s5, pos
 
 def rotation_about_point(R: np.ndarray, p: np.ndarray) -> np.ndarray:
     T = np.eye(4)
     T[:3, :3] = R
     T[:3, 3] = p - R @ p
     return T
-
-def generate_motion(angle_max_deg=90.0, ang_speed_deg_per_sec=60.0, cycles=1, fps=60):
-    cycle_time = 2.0 * angle_max_deg / ang_speed_deg_per_sec
-    frames_per_cycle = int(np.ceil(cycle_time * fps))
-
-    i = np.arange(frames_per_cycle)
-    phase = i / max(frames_per_cycle - 1, 1)
-    tri = 1.0 - np.abs(2.0 * phase - 1.0)   # 0 -> 1 -> 0
-    angles = np.tile(tri * angle_max_deg, cycles)
-    return angles
 
 def split_thigh_shin(points: np.ndarray, knee_center: np.ndarray, leg_axis: np.ndarray, foot_ref: np.ndarray):
     """
@@ -101,4 +101,3 @@ def color_points_by_distance_from_center(pcd, center):
     colors = cm.get_cmap("hsv")(dist_norm)[:, :3]
     pcd.colors = o3d.utility.Vector3dVector(colors)
     return pcd
-
