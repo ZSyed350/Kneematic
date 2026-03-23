@@ -6,6 +6,7 @@ from matplotlib.cm import ScalarMappable
 import matplotlib.cm as cm
 
 import process_data
+import visualize_3d as v3d
 
 NUM_CHIPS = 6
 SAMPLE = "visualize/generated_data.txt"
@@ -171,12 +172,15 @@ def update_angle(thigh_line, shin_line, angle_deg):
 
 if __name__ == "__main__":
     fig, ax, angle_ax, thigh_line, shin_line, knee_point, cell_rects, cell_texts, cmap, norm = initialize_PCAP_visualization(NUM_CHIPS)
+    state_3d = v3d.initialize_3d()
 
     # READ DATA - TO SIMULATE READING FROM A SERIAL MONITOR
     with open(SAMPLE, 'r', encoding='utf-8') as file:
         content = file.read()
     lines = content.split('\n')
 
+    plt.ion()
+    plt.show(block=False)
     for line in lines:
         try:
             chip, s0, s1, s2, s3, s4, s5, pos = process_data.process_line(line)
@@ -188,7 +192,9 @@ if __name__ == "__main__":
             cell_rects, cell_texts, cmap, norm
         )
         update_angle(thigh_line, shin_line, pos)
-        plt.pause(0.01)  # NOTE DELETE ME WHEN ARDUINO
 
-    plt.tight_layout()
-    plt.show()
+        v3d.update_3d_angle(state_3d, pos)
+        v3d.render_3d(state_3d)
+
+        fig.canvas.draw_idle()
+        fig.canvas.flush_events()
