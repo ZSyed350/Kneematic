@@ -5,6 +5,7 @@
 #include "em_braking.h"
 
 #define BAUD_RATE 115200
+#define PRINT_SLOWER 1
 
 // Global EM instance
 EM em;
@@ -172,31 +173,36 @@ void loop() {
         }
 
         // Print results
-        printResults();
+        printResults(pos);
     }
 }
 
-void printResults() {
+
+/*
+Data format:
+Chip, S0, S1, S2, S3, S4, S5, pos
+*/
+void printResults(float pos) {
     #define PCAP_CONVERSION_NUMBER 134217728
     static int print_counter = 0;
     
-    // Only print every 50 measurements (every 500ms at 100Hz)
-    print_counter++;
-    if (print_counter < 50) {
-        return;
+    // Only print every 20 measurements (every 500ms at 100Hz)
+    if (PRINT_SLOWER) {
+        print_counter++;
+        if (print_counter < 20) {
+            return;
+        }
+        print_counter = 0;
     }
-    print_counter = 0;
+
     
     // Print header
-    Serial.println(F("\n--- PCAP Measurements (100Hz sampling) ---"));
-    Serial.println(F("Chip | S0       | S1       | S2       | S3       | S4       | S5"));
-    Serial.println(F("-----|----------|----------|----------|----------|----------|----------"));
+    // Serial.println(F("Chip | S0       | S1       | S2       | S3       | S4       | S5"));
 
     // Print data for each chip
     for (int chip = PCAP_CHIP_1; chip <= PCAP_CHIP_2; chip++) {
-        Serial.print(F("  "));
         Serial.print(chip + 1);
-        Serial.print(F("  | "));
+        Serial.print(F(","));
         
         for (int sensor = 0; sensor < NUM_SENSORS_PER_CHIP; sensor++) {
             //float value = chip_data[chip].raw[sensor];
@@ -204,56 +210,19 @@ void printResults() {
             //uint32_t value = chip_data[chip].raw[sensor] - chip_data[chip].offset[sensor];
             
             // Print value with padding
-            if (value < 10000000) Serial.print(F(" "));
-            if (value < 1000000) Serial.print(F(" "));
-            if (value < 100000) Serial.print(F(" "));
-            if (value < 10000) Serial.print(F(" "));
-            if (value < 1000) Serial.print(F(" "));
-            if (value < 100) Serial.print(F(" "));
-            if (value < 10) Serial.print(F(" "));
+            // if (value < 10000000) Serial.print(F(" "));
+            // if (value < 1000000) Serial.print(F(" "));
+            // if (value < 100000) Serial.print(F(" "));
+            // if (value < 10000) Serial.print(F(" "));
+            // if (value < 1000) Serial.print(F(" "));
+            // if (value < 100) Serial.print(F(" "));
+            // if (value < 10) Serial.print(F(" "));
             
             Serial.print(value);
-            Serial.print(F(" | "));
+            Serial.print(F(","));
+            Serial.print(pos);
+            Serial.print(F(","));
         }
         Serial.println();
     }
-}
-
-void printDiagnostics() {
-
-    Serial.println(F("\n--- Pin Configuration ---"));
-    Serial.print(F("MUX_S0_PIN (2): GPIO "));
-    Serial.println(2);
-    Serial.print(F("MUX_S1_PIN (3): GPIO "));
-    Serial.println(3);
-    Serial.print(F("MUX_S2_PIN (4): GPIO "));
-    Serial.println(4);
-    Serial.print(F("MUX_S3_PIN (5): GPIO "));
-    Serial.println(5);
-    Serial.println(F("CS Control: Multiplexer (COMMON_I/O = GND, pull-ups on outputs)"));
-
-    Serial.println(F("\n--- SPI Pin Configuration ---"));
-    Serial.println(F("Hardware SPI (VSPI on ESP32C3):"));
-    Serial.println(F("  Expected MOSI: GPIO 51"));
-    Serial.println(F("  Expected MISO: GPIO 50"));
-    Serial.println(F("  Expected SCK:  GPIO 52"));
-    Serial.print(F("  Actual MOSI: GPIO "));
-    Serial.println(MOSI);
-    Serial.print(F("  Actual MISO: GPIO "));
-    Serial.println(MISO);
-    Serial.print(F("  Actual SCK:  GPIO "));
-    Serial.println(SCK);
-
-    Serial.println(F("\n--- Configuration ---"));
-    Serial.print(F("Number of PCAP chips: "));
-    Serial.println(NUM_PCAP_CHIPS);
-    Serial.print(F("Sensors per chip: "));
-    Serial.println(NUM_SENSORS_PER_CHIP);
-    Serial.print(F("Config size: "));
-    Serial.print(PCAP_CONFIG_SIZE);
-    Serial.println(F(" bytes"));
-    Serial.print(F("Firmware size: "));
-    Serial.print(PCAP_FW_SIZE);
-    Serial.println(F(" bytes"));
-    Serial.println(F("========================================"));
 }

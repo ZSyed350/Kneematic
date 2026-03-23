@@ -1,5 +1,31 @@
 import open3d as o3d
 import numpy as np
+import matplotlib.cm as cm
+
+
+class AngleSource:
+    def get_angle_deg(self) -> float:
+        raise NotImplementedError
+
+class GeneratedAngleSource(AngleSource):
+    def __init__(self, angles):
+        self.angles = np.asarray(angles, dtype=float)
+        self.i = 0
+
+    def get_angle_deg(self) -> float:
+        angle = self.angles[self.i % len(self.angles)]
+        self.i += 1
+        return float(angle)
+
+class LiveAngleSource(AngleSource):
+    def __init__(self, initial_angle_deg: float = 0.0):
+        self.current_angle_deg = float(initial_angle_deg)
+
+    def update_angle(self, angle_deg: float):
+        self.current_angle_deg = float(angle_deg)
+
+    def get_angle_deg(self) -> float:
+        return self.current_angle_deg
 
 def rotation_about_point(R: np.ndarray, p: np.ndarray) -> np.ndarray:
     T = np.eye(4)
@@ -59,8 +85,6 @@ def make_line(start: np.ndarray, end: np.ndarray, color=(0, 0, 0)):
     ls.lines = o3d.utility.Vector2iVector(np.array([[0, 1]]))
     ls.colors = o3d.utility.Vector3dVector([color])
     return ls
-
-import matplotlib.cm as cm
 
 def color_points_by_distance_from_center(pcd, center):
     points = np.asarray(pcd.points)

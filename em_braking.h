@@ -14,6 +14,7 @@ public:
 private:
     int dir;              // 1 = flexion, -1 = extension
     int prev_pos;
+    float initial_angle;
 
     void drive_PWM(float d);
     float pos2duty(float pos);

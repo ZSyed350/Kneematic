@@ -23,7 +23,7 @@ HEIGHT = 800
 
 # POINT REMOVAL PARAMETERS
 KNEE_RADIUS = 100.0
-KNEE_DEPTH = 56.0
+KNEE_DEPTH = 70.0
 HIP_RADIUS = 500.0
 HIP_DEPTH = 360.0
 FOOT_RADIUS = 600.0
@@ -34,6 +34,28 @@ FPS = 60
 MAX_BEND_DEG = 90.0
 CYCLES = 1
 ANG_SPEED_DEG_PER_SEC = 60.0
+USE_LIVE_ANGLE = False
+
+
+def apply_knee_angle(
+    angle_deg: float,
+    shin_base_points: np.ndarray,
+    shin_pcd,
+    rot_axis: np.ndarray,
+    knee_center: np.ndarray,
+):
+    # Reset shin points from base
+    current_shin = shin_base_points.copy()
+
+    # Use negative sign because that is the bend direction you wanted
+    theta = -np.deg2rad(angle_deg)
+    R = o3d.geometry.get_rotation_matrix_from_axis_angle(rot_axis * theta)
+    T = animate.rotation_about_point(R, knee_center)
+
+    # Rotate shin point cloud
+    current_shin_h = np.c_[current_shin, np.ones(len(current_shin))]
+    current_shin = (T @ current_shin_h.T).T[:, :3]
+    shin_pcd.points = o3d.utility.Vector3dVector(current_shin)
 
 
 if __name__ == "__main__":
@@ -159,35 +181,25 @@ if __name__ == "__main__":
         fps=FPS,
     )
 
-    frame_idx = {"i": 0}
+    if USE_LIVE_ANGLE:
+        angle_source = animate.LiveAngleSource(initial_angle_deg=0.0)
+        # Arduino listener here
+    else:
+        angle_source = animate.GeneratedAngleSource(angles)
+
 
     def animate_callback(vis):
-        i = frame_idx["i"] % len(angles)
-        angle_deg = angles[i]
+        angle_deg = angle_source.get_angle_deg()
 
-        # Reset shin points from base
-        current_shin = shin_base_points.copy()
-
-        # Axis-angle rotation about plane normal
-        theta = -np.deg2rad(angle_deg)
-        R = o3d.geometry.get_rotation_matrix_from_axis_angle(rot_axis * theta)
-        T = animate.rotation_about_point(R, knee_center)
-
-        # Rotate shin point cloud
-        current_shin_h = np.c_[current_shin, np.ones(len(current_shin))]
-        current_shin = (T @ current_shin_h.T).T[:, :3]
-        shin_pcd.points = o3d.utility.Vector3dVector(current_shin)
-
-        # Rotate shin axis line too
-        # shin_line_pts = shin_line_base.copy()
-        # shin_line_h = np.c_[shin_line_pts, np.ones(len(shin_line_pts))]
-        # shin_line_pts = (T @ shin_line_h.T).T[:, :3]
-        # shin_line.points = o3d.utility.Vector3dVector(shin_line_pts)
+        apply_knee_angle(
+            angle_deg=angle_deg,
+            shin_base_points=shin_base_points,
+            shin_pcd=shin_pcd,
+            rot_axis=rot_axis,
+            knee_center=knee_center,
+        )
 
         vis.update_geometry(shin_pcd)
-        # vis.update_geometry(shin_line)
-
-        frame_idx["i"] += 1
         return False
     
     vis.register_animation_callback(animate_callback)
