@@ -5,7 +5,7 @@
 #include "em_braking.h"
 
 #define BAUD_RATE 115200
-#define PRINT_SLOWER 1
+#define PRINT_SLOWER 0
 
 // Global EM instance
 EM em;
@@ -196,7 +196,7 @@ void printResults(float pos) {
     // Serial.println(F("Chip | S0       | S1       | S2       | S3       | S4       | S5"));
 
     // Print data for each chip
-    for (int chip = PCAP_CHIP_1; chip <= PCAP_CHIP_2; chip++) {
+    for (int chip = PCAP_CHIP_1; chip <= PCAP_CHIP_1; chip++) {
         Serial.print(chip + 1);
         Serial.print(F(","));
         
@@ -216,9 +216,9 @@ void printResults(float pos) {
             
             Serial.print(value);
             Serial.print(F(","));
-            Serial.print(pos);
-            Serial.print(F(","));
         }
+        Serial.print(pos);
+        Serial.print(F(","));
         Serial.println();
     }
 }

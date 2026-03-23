@@ -20,10 +20,10 @@
  */
 
 // TODO: These pin assignments are based on the old schematic. Need to change for the new board.
-#define MUX_S0_PIN  2   ///< PCAP_SEL0 - Connects to multiplexer S0
-#define MUX_S1_PIN  3   ///< PCAP_SEL1 - Connects to multiplexer S1
-#define MUX_S2_PIN  4   ///< PCAP_SEL2 - Connects to multiplexer S2
-#define MUX_S3_PIN  5   ///< PCAP_SEL3 - Connects to multiplexer S3
+#define MUX_S0_PIN  7   ///< PCAP_SEL0 - Connects to multiplexer S0
+#define MUX_S1_PIN  8   ///< PCAP_SEL1 - Connects to multiplexer S1
+#define MUX_S2_PIN  9   ///< PCAP_SEL2 - Connects to multiplexer S2
+#define MUX_S3_PIN  10   ///< PCAP_SEL3 - Connects to multiplexer S3
 /** @} */
 
 /**
