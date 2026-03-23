@@ -98,7 +98,7 @@ def color_points_by_distance_from_center(pcd, center):
     else:
         dist_norm = (dist - d_min) / (d_max - d_min)
 
-    colors = cm.get_cmap("viridis")(dist_norm)[:, :3]
+    colors = cm.get_cmap("hsv")(dist_norm)[:, :3]
     pcd.colors = o3d.utility.Vector3dVector(colors)
     return pcd
 

@@ -93,7 +93,6 @@ uint8_t standard_firmware[PCAP_FW_SIZE] = {
 };
 
 void printResults();
-void printDiagnostics();
 
 void setup() {
     bool testResult = false;
@@ -103,9 +102,6 @@ void setup() {
     Serial.println(F("========================================"));
     Serial.println(F("PCAP04 Firmware Starting..."));
     Serial.println(F("========================================"));
-
-    // Print diagnostic information
-    printDiagnostics();
 
     // Initialize the PCAP driver
     pcap.begin();

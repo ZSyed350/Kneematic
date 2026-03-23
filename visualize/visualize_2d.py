@@ -141,6 +141,34 @@ def update_chip_visualization(chip, s0, s1, s2, s3, s4, s5, cell_rects, cell_tex
         cell_rects[chip][i].set_facecolor(cmap(norm(value)))
         cell_texts[chip][i].set_text(f"{value:.1f}")
 
+def update_angle(thigh_line, shin_line, angle_deg):
+    # Get current thigh endpoints
+    thigh_x = thigh_line.get_xdata()
+    thigh_y = thigh_line.get_ydata()
+
+    hip = np.array([thigh_x[0], thigh_y[0]])
+    knee = np.array([thigh_x[1], thigh_y[1]])
+
+    # Shin length from its initial/current geometry
+    shin_x = shin_line.get_xdata()
+    shin_y = shin_line.get_ydata()
+    ankle_old = np.array([shin_x[1], shin_y[1]])
+    shin_length = np.linalg.norm(ankle_old - knee)
+
+    # Straight down from knee would be -90 deg from +x axis
+    # Add bend angle so leg swings to the right for positive values
+    theta = np.deg2rad(-90 + angle_deg)
+
+    ankle_new = knee + shin_length * np.array([
+        np.cos(theta),
+        np.sin(theta)
+    ])
+
+    shin_line.set_data(
+        [knee[0], ankle_new[0]],
+        [knee[1], ankle_new[1]]
+    )
+
 if __name__ == "__main__":
     fig, ax, angle_ax, thigh_line, shin_line, knee_point, cell_rects, cell_texts, cmap, norm = initialize_PCAP_visualization(NUM_CHIPS)
 
@@ -159,7 +187,8 @@ if __name__ == "__main__":
             chip, s0, s1, s2, s3, s4, s5,
             cell_rects, cell_texts, cmap, norm
         )
-        plt.pause(0.001)  # NOTE DELETE ME WHEN ARDUINO
+        update_angle(thigh_line, shin_line, pos)
+        plt.pause(0.01)  # NOTE DELETE ME WHEN ARDUINO
 
     plt.tight_layout()
     plt.show()
